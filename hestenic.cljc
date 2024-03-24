@@ -225,8 +225,7 @@
 ;;
 ;; all things Bladoid, don't you know. well, not all. in any event, one of
 ;; these is a weighted (scaled) canonical basis element of the GA. does not
-;; for the moment presuppose any particular dimension. also does not afford
-;; configurable metrics. not yet. but soon.
+;; presuppose any particular dimension, which is to be regarded as a strength.
 ;;
 
 (defprotocol IBladoid
@@ -254,7 +253,7 @@
 (defn bladoid
   ([]
    (Bladoid. 1.0 []))
-  ([c_or_b]
+  ([c_or_b]  ;; coefficient-or-basis
    (if (sequential? c_or_b)
      (Bladoid. 1.0 (vec (sort c_or_b)))
      (Bladoid. c_or_b [])))
@@ -340,7 +339,7 @@
 ;;
 ;; A Gradeling is a bevy of Bladoids of the same grade. It may or may not be
 ;; itself a blade (the 'not' part becomes a possibility for dimensions above
-;; three, which offers unfactorable disgraces like e01 + e12).
+;; three, which offers unfactorable disgraces like e01 + e23).
 ;;
 
 (defprotocol IGradeling
@@ -1003,8 +1002,16 @@
     (if (different-rung? this otha)
       (sum (asMV this) (asMV otha))
       (accordion-down
-       (Vect. (vec (map (fn [hoo hah] (+ hoo hah))
-                        (coefs this) (coefs otha)))))))
+       (Vect. (vec (let [aa (coefs this)
+                         bb (coefs otha)
+                         anct (count aa)
+                         bcnt (count bb)
+                         alb (< anct bcnt)
+                         bla (< bcnt anct)
+                         aaa (if alb (concat aa (repeat 0.0)) aa)
+                         bbb (if bla (concat bb (repeat 0.0)) bb)]
+                     (map (fn [hoo hah] (+ hoo hah))
+                          aaa bbb)))))))
   (neg [this]
     (Vect. (vec (map (fn [co] (- co))
                      (coefs this)))))
@@ -1024,8 +1031,9 @@
     (if (different-rung? this otha)
       (dot (asMV this) (asMV otha))
       (reduce +
-              (map *
-                   (coefs this) (coefs otha)))))
+              (map-indexed (fn [ind val]
+                             (* val (metric-for-basis-index ind)))
+                           (map * (coefs this) (coefs otha))))))
   (wdg [this otha]
     (if (different-rung? this otha)
       (wdg (asMV this) (asMV otha))
